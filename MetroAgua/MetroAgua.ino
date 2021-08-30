@@ -60,11 +60,19 @@ void handleNewMessages(int numNewMessages) {
     }
     
     // Print the received message
-    String text = bot.messages[i].text;
-    Serial.println(text);
 
+    //Serial.println(text);
+    if (bot.messages[i].type==F("callback_query")){ 
+          String text1 = bot.messages[i].text;
+    if (text1==F("Caudal")){
+      bot.sendMessage(chat_id,"El caudal es "+ String(flow_Lmin, 3)+ " L/min", "");
+      }
+      else if (text1==F("Consumo")){
+       bot.sendMessage(chat_id, "El volumen es "+ String(volumen,3)+ " litros ", ""); 
+        }
+    }
     String from_name = bot.messages[i].from_name;
-
+    String text = bot.messages[i].text;
     if (text == "/caudal") {
      
       
@@ -73,19 +81,32 @@ void handleNewMessages(int numNewMessages) {
     }
     
     if (text == "/consumo") {
-   
-
-      
+         
       bot.sendMessage(chat_id, "El volumen es "+ String(volumen,3)+ " litros ", "");
       Serial.println ("Consumo");
     }
 
+    if (text == "/pantalla") {
+  // usar botones en la pantalla , se le pueden poner cosas (pacotilla)
+      String keyboardJson=F("[[ { \"text\": \"Caudal\",\"color\": \"green\", \"callback_data\" : \"Caudal\"}], [ { \"text\": \"Consumo\", \"callback_data\" : \"Consumo\"}]]");
+      bot.sendMessageWithInlineKeyboard(chat_id,"Botones en pantalla", "", keyboardJson);
+    }
+if (text == "/teclado") {
+
+String keyboardJson = "[[\"/caudal\", \"/consumo\"]]"; // usar botones con los nombres de las funciones
+      bot.sendMessageWithReplyKeyboard(chat_id, "Botones en teclado", "", keyboardJson, true);
+      Serial.println ("botones");
+    }
+
+
      if (text == "/start")
     {
-      String welcome = "Welcome to Universal Arduino Telegram Bot library, " + from_name + ".\n";
-      welcome += "This is Flash Led Bot example.\n\n";
+      String welcome = "Sistema de medicion de parametros de agua, " + from_name + ".\n";
+      welcome += "\n\n";
       welcome += "/caudal : Lmin\n";
       welcome += "/consumo : Litros\n";
+      welcome += "/pantalla : Botones en pantalla\n";  
+      welcome += "/teclado : Botones en teclado";  
       
       bot.sendMessage(chat_id, welcome, "Markdown");
     }

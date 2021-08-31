@@ -80,7 +80,20 @@ UniversalTelegramBot bot(BOTtoken, client);
 int botRequestDelay = 5000;
 unsigned long lastTimeBotRan;
 
-void enviarMensaje(float flow_Lmin)
+// valores de los correos
+
+String codigo="";
+String tituloCorreo="";
+String direccionDestino="";
+String nickDestino="";
+String resultadoCorreo="";
+
+float caudalAlarma=20.0;
+float volumenAlarma=1000;
+
+String chat_id="";
+
+void enviarMensaje()
 {
 
   /** Enable the debug via Serial port
@@ -112,12 +125,12 @@ void enviarMensaje(float flow_Lmin)
   /* Set the message headers */
   message.sender.name = "Sistema Agua_Iot";
   message.sender.email = AUTHOR_EMAIL;
-  message.subject = "Indicador de volumen y caudal";
-  message.addRecipient("Admin", "proy.iot2021@gmail.com");
+  message.subject = tituloCorreo.c_str();
+  message.addRecipient(nickDestino.c_str(), direccionDestino.c_str());
 int valor = 10;
 
-    String codigo="";
-    codigo="<p>El caudal es de  " +String (flow_Lmin,3)+" L/min y el volumen es de "+String (volumen,3)+" Litros.</p><p> Este mensaje es enviado via NodeMCU por el Sistema Metro-Agua.</p>";; 
+    //String codigo="";
+    
    message.html.content = codigo.c_str();
   //message.html.content = "<p>This is the "<span style=\"color:#ff0000;\">html text</span> message.</p><p>The message was sent via ESP device.</p>"; 
   
@@ -177,7 +190,7 @@ void handleNewMessages(int numNewMessages) {
 
   for (int i=0; i<numNewMessages; i++) {
     // Chat id of the requester
-    String chat_id = String(bot.messages[i].chat_id);
+    chat_id = String(bot.messages[i].chat_id);
     Serial.println(chat_id);
     if (chat_id != CHAT_ID){
       bot.sendMessage(chat_id, "Unauthorized user", "");
@@ -222,16 +235,67 @@ String keyboardJson = "[[\"/caudal\", \"/consumo\"]]"; // usar botones con los n
       bot.sendMessageWithReplyKeyboard(chat_id, "Botones en teclado", "", keyboardJson, true);
       Serial.println ("botones");
     }
+    if (text == "/informeCorreo")
+    {
+      codigo="<p>El caudal es de  " + String (flow_Lmin,3)+" L/min y el volumen es de "+String (volumen,3)+" Litros.</p><p> Este mensaje es enviado via NodeMCU por el Sistema Metro-Agua.</p>"; 
+      tituloCorreo= "Datos de caudal y consumo de agua. ";
+      nickDestino= "Usuario_1";
+      direccionDestino="proy.iot2021@gmail.com";
+      enviarMensaje();
+      if (resultadoCorreo=="success"){
+        bot.sendMessage(chat_id, "Correo enviado correctamente", "Markdown");
+        }
+        if (resultadoCorreo=="failed"){
+        bot.sendMessage(chat_id, "Error en envio de correo", "Markdown");
+        }
+    }
+
+    if (text == "/confAlarma")
+    {
+     bot.sendMessage(chat_id, "Envie el valor de alarma de caudal", "Markdown"); 
+    }
+    if (text.substring(0,3)== "/C-")
+    {
+       int pos =text.indexOf("-");
+     //bot.sendMessage(chat_id, (String)(pos), "Markdown"); 
+     bot.sendMessage(chat_id, "Alarma de caudal: "+text.substring(pos+1)+" L/min", "Markdown");
+     String valor1= text.substring(pos+1);
+     if (valor1=="off"){
+      caudalAlarma=20;
+      }
+      else{
+     caudalAlarma=valor1.toFloat();
+      }
+    }
+    if (text.substring(0,3)== "/V-")
+    {
+       int pos =text.indexOf("-");
+     //bot.sendMessage(chat_id, (String)(pos), "Markdown"); 
+     bot.sendMessage(chat_id, "Alarma de volumen: "+text.substring(pos+1)+" Litros", "Markdown");
+     String valor= text.substring(pos+1);
+     
+
+     if (valor=="off"){
+      volumenAlarma=100;
+     }
+     else{
+      volumenAlarma=valor.toFloat();
+      }
+    }
+    
 
 
      if (text == "/start")
     {
       String welcome = "Sistema de medicion de parametros de agua, " + from_name + ".\n";
-      welcome += "\n\n";
-      welcome += "/caudal : Lmin\n";
+      welcome += "\n";
+      welcome += "/caudal : L/min\n";
       welcome += "/consumo : Litros\n";
       welcome += "/pantalla : Botones en pantalla\n";  
-      welcome += "/teclado : Botones en teclado";  
+      welcome += "/teclado : Botones en teclado\n";
+      welcome += "/informeCorreo : Enviar correo  con resumen\n";
+      welcome += "/confAlarma : Configurar alarmas";
+        
       
       bot.sendMessage(chat_id, welcome, "Markdown");
     }
@@ -294,9 +358,10 @@ WiFi.mode(WIFI_STA);
   t0 = millis();
    
 
-  
+ 
+
    
-   enviarMensaje(flow_Lmin);
+   //enviarMensaje();
 }
 
 void loop()
@@ -305,6 +370,16 @@ void loop()
 
   if (millis() > lastTimeBotRan + botRequestDelay) {
     int numNewMessages = bot.getUpdates(bot.last_message_received + 1);
+
+ if (caudalAlarma<=flow_Lmin){
+
+    bot.sendMessage("-560789110", "Alarma Caudal", "");
+    
+    }
+  if (volumenAlarma<=volumen){
+    bot.sendMessage(chat_id, "Alarma Volumen", "");
+    
+    }
   
     while(numNewMessages) {
       Serial.println("got response");
@@ -319,6 +394,19 @@ void loop()
   // calcular caudal L/min
   flow_Lmin = frequency / factorK;
   SumVolume(flow_Lmin);
+
+//  if (caudalAlarma<=flow_Lmin){
+////    Serial.println(caudalAlarma);
+////    delay(50);
+////    Serial.println(flow_Lmin);
+////    delay(50);
+//    bot.sendMessage("-560789110", "Alarma Caudal", "");
+//    delay(5000);
+//    }
+//  if (volumenAlarma<=volumen){
+//    //bot.sendMessage(chat_id, "Alarma Volumen", "");
+//    
+//    }
 }
 
 void smtpCallback(SMTP_Status status)
@@ -340,6 +428,7 @@ void smtpCallback(SMTP_Status status)
       /* Get the result item */
       SMTP_Result result = smtp.sendingResult.getItem(i);
       localtime_r(&result.timesstamp, &dt);
+      resultadoCorreo= result.completed ? "success" : "failed";
 
       Serial.printf("Message No: %d\n", i + 1);
       Serial.printf("Status: %s\n", result.completed ? "success" : "failed");

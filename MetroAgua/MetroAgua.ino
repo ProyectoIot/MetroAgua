@@ -90,6 +90,7 @@ String resultadoCorreo="";
 
 float caudalAlarma=20.0;
 float volumenAlarma=1000;
+int conf=0;
 
 String chat_id="";
 
@@ -200,7 +201,7 @@ void handleNewMessages(int numNewMessages) {
     // Print the received message
 
     //Serial.println(text);
-    if (bot.messages[i].type==F("callback_query")){ 
+    if (bot.messages[i].type==F("callback_query") && conf==0) { 
           String text1 = bot.messages[i].text;
     if (text1==F("Caudal")){
       bot.sendMessage(chat_id,"El caudal es "+ String(flow_Lmin, 3)+ " L/min", "");
@@ -211,31 +212,30 @@ void handleNewMessages(int numNewMessages) {
     }
     String from_name = bot.messages[i].from_name;
     String text = bot.messages[i].text;
-    if (text == "/caudal") {
-     
-      
+    if (text == "/caudal" && conf==0) {
+         
       bot.sendMessage(chat_id,"El caudal es "+ String(flow_Lmin, 3)+ " L/min", "");
       Serial.println ("Caudal");
     }
     
-    if (text == "/consumo") {
+    if (text == "/consumo" && conf==0) {
          
       bot.sendMessage(chat_id, "El volumen es "+ String(volumen,3)+ " litros ", "");
       Serial.println ("Consumo");
     }
 
-    if (text == "/pantalla") {
+    if (text == "/pantalla" && conf==0) {
   // usar botones en la pantalla , se le pueden poner cosas (pacotilla)
       String keyboardJson=F("[[ { \"text\": \"Caudal\",\"color\": \"green\", \"callback_data\" : \"Caudal\"}], [ { \"text\": \"Consumo\", \"callback_data\" : \"Consumo\"}]]");
       bot.sendMessageWithInlineKeyboard(chat_id,"Botones en pantalla", "", keyboardJson);
     }
-if (text == "/teclado") {
+if (text == "/teclado" && conf==0) {
 
 String keyboardJson = "[[\"/caudal\", \"/consumo\"]]"; // usar botones con los nombres de las funciones
       bot.sendMessageWithReplyKeyboard(chat_id, "Botones en teclado", "", keyboardJson, true);
       Serial.println ("botones");
     }
-    if (text == "/informeCorreo")
+    if (text == "/informeCorreo" && conf==0)
     {
       codigo="<p>El caudal es de  " + String (flow_Lmin,3)+" L/min y el volumen es de "+String (volumen,3)+" Litros.</p><p> Este mensaje es enviado via NodeMCU por el Sistema Metro-Agua.</p>"; 
       tituloCorreo= "Datos de caudal y consumo de agua. ";
@@ -250,11 +250,12 @@ String keyboardJson = "[[\"/caudal\", \"/consumo\"]]"; // usar botones con los n
         }
     }
 
-    if (text == "/confAlarma")
+    if (text == "/confAlarma" && conf==0)
     {
-     bot.sendMessage(chat_id, "Envie el valor de alarma de caudal", "Markdown"); 
+     bot.sendMessage(chat_id, "Cambio alarmas con C-valor y V-valor. Para salir del modo configuracion escriba A", "Markdown"); 
+     conf=1;
     }
-    if (text.substring(0,3)== "/C-")
+    if (text.substring(0,3)== "/C-" &&  conf==1)
     {
        int pos =text.indexOf("-");
      //bot.sendMessage(chat_id, (String)(pos), "Markdown"); 
@@ -267,25 +268,37 @@ String keyboardJson = "[[\"/caudal\", \"/consumo\"]]"; // usar botones con los n
      caudalAlarma=valor1.toFloat();
       }
     }
-    if (text.substring(0,3)== "/V-")
+    
+    if (text.substring(0,3)== "/V-" && conf==1)
     {
        int pos =text.indexOf("-");
      //bot.sendMessage(chat_id, (String)(pos), "Markdown"); 
      bot.sendMessage(chat_id, "Alarma de volumen: "+text.substring(pos+1)+" Litros", "Markdown");
      String valor= text.substring(pos+1);
      
-
      if (valor=="off"){
       volumenAlarma=100;
      }
-     else{
+     else {
       volumenAlarma=valor.toFloat();
       }
     }
-    
+    if (text == "/A" && conf==1)
+     {
+      conf=0;
+      bot.sendMessage(chat_id, "Ha salido del modo configuracion de alarma", "Markdown"); 
+      
+     }
+     if (text == "/alarmas" && conf==0)
+     {
+      
+      bot.sendMessage(chat_id, "La alarma de caudal esta en "+(String)(caudalAlarma)+ " L/min", "Markdown"); 
+      bot.sendMessage(chat_id, "La alarma de volumen esta en "+(String)(volumenAlarma)+ " Litros", "Markdown"); 
+      
+     }
 
 
-     if (text == "/start")
+     if (text == "/start" && conf==0)
     {
       String welcome = "Sistema de medicion de parametros de agua, " + from_name + ".\n";
       welcome += "\n";
@@ -294,6 +307,7 @@ String keyboardJson = "[[\"/caudal\", \"/consumo\"]]"; // usar botones con los n
       welcome += "/pantalla : Botones en pantalla\n";  
       welcome += "/teclado : Botones en teclado\n";
       welcome += "/informeCorreo : Enviar correo  con resumen\n";
+      welcome += "/alarmas : Valores de las alarmas\n";
       welcome += "/confAlarma : Configurar alarmas";
         
       

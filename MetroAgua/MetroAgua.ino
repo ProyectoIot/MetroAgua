@@ -31,6 +31,8 @@ const float factorK = 7.5;
 
 float volumen = 0;
 float flow_Lmin =0;
+float caudalMax=0;
+float caudalMin=0;
 long t0 = 0;
 
 // Replace with your network credentials
@@ -205,17 +207,17 @@ void handleNewMessages(int numNewMessages) {
     if (bot.messages[i].type==F("callback_query") && conf==0) { 
           String text1 = bot.messages[i].text;
     if (text1==F("Caudal")){
-      bot.sendMessage(chat_id,"El caudal es "+ String(flow_Lmin, 3)+ " L/min", "");
+      bot.sendMessage(chat_id,"El caudal es de"+ String(flow_Lmin, 3)+ " L/min con un caudal maximo de "+ (String)(caudalMax)+" L/min.", "");
       }
       else if (text1==F("Consumo")){
-       bot.sendMessage(chat_id, "El volumen es "+ String(volumen,3)+ " litros ", ""); 
+       bot.sendMessage(chat_id, "El volumen es de  "+ String(volumen,3)+ " Litros. ", ""); 
         }
     }
     String from_name = bot.messages[i].from_name;
     String text = bot.messages[i].text;
     if (text == "/caudal" && conf==0) {
          
-      bot.sendMessage(chat_id,"El caudal es "+ String(flow_Lmin, 3)+ " L/min", "");
+      bot.sendMessage(chat_id,"El caudal es "+ String(flow_Lmin, 3)+ " L/min con un caudal maximo de "+ (String)(caudalMax)+" L/min.", "");
       Serial.println ("Caudal");
     }
     
@@ -238,7 +240,7 @@ String keyboardJson = "[[\"/caudal\", \"/consumo\"]]"; // usar botones con los n
     }
     if (text == "/informeCorreo" && conf==0)
     {
-      codigo="<p>El caudal es de  " + String (flow_Lmin,3)+" L/min y el volumen es de "+String (volumen,3)+" Litros.</p><p> Este mensaje es enviado via NodeMCU por el Sistema Metro-Agua.</p>"; 
+      codigo="<p>El caudal es de  " + String (flow_Lmin,3)+" L/min con un caudal maximo de "+ (String)(caudalMax)+" L/min.\n El volumen es de "+String (volumen,3)+" Litros.</p><p> Este mensaje es enviado via NodeMCU por el Sistema Metro-Agua.</p>"; 
       //tituloCorreo= "Datos de caudal y consumo de agua. ";
       //nickDestino= "Usuario_1";
       //direccionDestino="proy.iot2021@gmail.com";
@@ -301,9 +303,8 @@ String keyboardJson = "[[\"/caudal\", \"/consumo\"]]"; // usar botones con los n
      if (text == "/alarmas" && conf==0)
      {
       
-      bot.sendMessage(chat_id, "La alarma de caudal esta en "+(String)(caudalAlarma)+ " L/min", "Markdown"); 
-      bot.sendMessage(chat_id, "La alarma de volumen esta en "+(String)(volumenAlarma)+ " Litros", "Markdown"); 
-      
+      bot.sendMessage(chat_id, "La alarma de caudal esta en "+(String)(caudalAlarma)+ " L/min. \n"+"La alarma de volumen esta en "+(String)(volumenAlarma)+ " Litros", "Markdown"); 
+            
      }
       if (text == "/correo" && conf==0)
      {
@@ -318,7 +319,7 @@ String keyboardJson = "[[\"/caudal\", \"/consumo\"]]"; // usar botones con los n
      {
       conf=2;
       bot.sendMessage(chat_id, "Ha entrado en el modo Configuracion correo. ", "Markdown"); 
-      bot.sendMessage(chat_id, "Para cambiar el correo pongalo de la siguiente forma I-usuario@gmail.com.\nPara cambiar el nick ponga NI-. \n Para cambiar el titulo del correo ponga TI-. \n Para cambiar el Para salir del modo configuracion correo escriba X", "Markdown"); 
+      bot.sendMessage(chat_id, "Para cambiar el correo pongalo de la siguiente forma I-usuario@gmail.com.\n Para cambiar el nick ponga NI-. \n Para cambiar el titulo del correo ponga TI-. \n Para cambiar el Para salir del modo configuracion correo escriba X", "Markdown"); 
       
      }
      if (text.substring(0,3)== "/I-" && conf==2)
@@ -366,14 +367,7 @@ String keyboardJson = "[[\"/caudal\", \"/consumo\"]]"; // usar botones con los n
       bot.sendMessage(chat_id, welcome, "Markdown");
     }
     
-//    if (text == "/state") {
-//      if (digitalRead(ledPin)){
-//        bot.sendMessage(chat_id, "LED is ON", "");
-//      }
-//      else{
-//        bot.sendMessage(chat_id, "LED is OFF", "");
-//      }
-//    }
+
   }
 }
 
@@ -461,18 +455,11 @@ void loop()
   flow_Lmin = frequency / factorK;
   SumVolume(flow_Lmin);
 
-//  if (caudalAlarma<=flow_Lmin){
-////    Serial.println(caudalAlarma);
-////    delay(50);
-////    Serial.println(flow_Lmin);
-////    delay(50);
-//    bot.sendMessage("-560789110", "Alarma Caudal", "");
-//    delay(5000);
-//    }
-//  if (volumenAlarma<=volumen){
-//    //bot.sendMessage(chat_id, "Alarma Volumen", "");
-//    
-//    }
+  if (flow_Lmin>caudalMax) // Calculo del caudal max 
+  {
+    caudalMax=flow_Lmin;
+  }
+
 }
 
 void smtpCallback(SMTP_Status status)

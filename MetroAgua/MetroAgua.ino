@@ -83,14 +83,15 @@ unsigned long lastTimeBotRan;
 // valores de los correos
 
 String codigo="";
-String tituloCorreo="";
-String direccionDestino="";
-String nickDestino="";
+String tituloCorreo="Resumen del Sistema AguaIot";
+String direccionDestino="proy.iot2021@gmail.com";
+String nickDestino="Admin";
 String resultadoCorreo="";
 
 float caudalAlarma=20.0;
 float volumenAlarma=1000;
 int conf=0;
+
 
 String chat_id="";
 
@@ -238,9 +239,9 @@ String keyboardJson = "[[\"/caudal\", \"/consumo\"]]"; // usar botones con los n
     if (text == "/informeCorreo" && conf==0)
     {
       codigo="<p>El caudal es de  " + String (flow_Lmin,3)+" L/min y el volumen es de "+String (volumen,3)+" Litros.</p><p> Este mensaje es enviado via NodeMCU por el Sistema Metro-Agua.</p>"; 
-      tituloCorreo= "Datos de caudal y consumo de agua. ";
-      nickDestino= "Usuario_1";
-      direccionDestino="proy.iot2021@gmail.com";
+      //tituloCorreo= "Datos de caudal y consumo de agua. ";
+      //nickDestino= "Usuario_1";
+      //direccionDestino="proy.iot2021@gmail.com";
       enviarMensaje();
       if (resultadoCorreo=="success"){
         bot.sendMessage(chat_id, "Correo enviado correctamente", "Markdown");
@@ -252,7 +253,7 @@ String keyboardJson = "[[\"/caudal\", \"/consumo\"]]"; // usar botones con los n
 
     if (text == "/confAlarma" && conf==0)
     {
-     bot.sendMessage(chat_id, "Cambio alarmas con C-valor y V-valor. Para salir del modo configuracion escriba A", "Markdown"); 
+     bot.sendMessage(chat_id, "Cambio alarmas con C-valor y V-valor. Para salir del modo configuracion alarma escriba X", "Markdown"); 
      conf=1;
     }
     if (text.substring(0,3)== "/C-" &&  conf==1)
@@ -283,10 +284,18 @@ String keyboardJson = "[[\"/caudal\", \"/consumo\"]]"; // usar botones con los n
       volumenAlarma=valor.toFloat();
       }
     }
-    if (text == "/A" && conf==1)
+    if (text == "/X" && (conf==1 || conf==2))
      {
-      conf=0;
+      if (conf==1)
+      {
+        conf=0;
       bot.sendMessage(chat_id, "Ha salido del modo configuracion de alarma", "Markdown"); 
+      }
+      else
+      {
+        conf=0;
+      bot.sendMessage(chat_id, "Ha salido del modo configuracion de correo", "Markdown");
+      }
       
      }
      if (text == "/alarmas" && conf==0)
@@ -296,7 +305,49 @@ String keyboardJson = "[[\"/caudal\", \"/consumo\"]]"; // usar botones con los n
       bot.sendMessage(chat_id, "La alarma de volumen esta en "+(String)(volumenAlarma)+ " Litros", "Markdown"); 
       
      }
+      if (text == "/correo" && conf==0)
+     {
+      
+      bot.sendMessage(chat_id, "Direccion de correo "+ direccionDestino, "Markdown"); 
+      bot.sendMessage(chat_id, "Nick del correo "+nickDestino, "Markdown"); 
+      bot.sendMessage(chat_id, "Titulo del correo "+ tituloCorreo, "Markdown"); 
+      
+     }
 
+     if (text == "/confCorreo" && conf==0)
+     {
+      conf=2;
+      bot.sendMessage(chat_id, "Ha entrado en el modo Configuracion correo. ", "Markdown"); 
+      bot.sendMessage(chat_id, "Para cambiar el correo pongalo de la siguiente forma I-usuario@gmail.com.\nPara cambiar el nick ponga NI-. \n Para cambiar el titulo del correo ponga TI-. \n Para cambiar el Para salir del modo configuracion correo escriba X", "Markdown"); 
+      
+     }
+     if (text.substring(0,3)== "/I-" && conf==2)
+     {
+      int pos1 =text.indexOf("-");
+     String valor1= text.substring(pos1+1); 
+     if (valor1.indexOf("@")>0)
+     {
+      direccionDestino=valor1;
+     bot.sendMessage(chat_id, "Nuevo correo: "+valor1, "Markdown");
+     }
+     else 
+     {
+      bot.sendMessage(chat_id, "Correo incorrecto", "Markdown");
+     }
+     }
+     if (text.substring(0,4)== "/NI-" && conf==2)
+     {
+      int pos2 =text.indexOf("-");
+     nickDestino=text.substring(pos2+1);;
+     bot.sendMessage(chat_id, "Nuevo nick del correo: "+nickDestino, "Markdown");
+     }
+
+     if (text.substring(0,4)== "/TI-" && conf==2)
+     {
+      int pos3 =text.indexOf("-");
+     tituloCorreo=text.substring(pos3+1);;
+     bot.sendMessage(chat_id, "Nuevo titulo del correo: "+tituloCorreo, "Markdown");
+     }
 
      if (text == "/start" && conf==0)
     {
@@ -308,8 +359,9 @@ String keyboardJson = "[[\"/caudal\", \"/consumo\"]]"; // usar botones con los n
       welcome += "/teclado : Botones en teclado\n";
       welcome += "/informeCorreo : Enviar correo  con resumen\n";
       welcome += "/alarmas : Valores de las alarmas\n";
-      welcome += "/confAlarma : Configurar alarmas";
-        
+      welcome += "/correo : Correo a enviar informe\n";
+      welcome += "/confAlarma : Configurar alarmas\n";
+      welcome += "/confCorreo : Configurar correo";
       
       bot.sendMessage(chat_id, welcome, "Markdown");
     }

@@ -3,6 +3,8 @@
 #else
   #include <ESP8266WiFi.h>
 #endif
+ 
+
 
 //To use send Email for Gmail to port 465 (SSL), less secure app option should be enabled. https://myaccount.google.com/lesssecureapps?pli=1
 
@@ -15,7 +17,20 @@
 //#include <ArduinoJson.h>
 #include <ArduinoJson.h>
 
+// Servidor NTP
+#include <NTPClient.h>
+#include <WiFiUdp.h>
 
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "pool.ntp.org");
+
+//Week Days
+String weekDays[7]={"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+
+//Month names
+String months[12]={"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
+
+// Sensor de caudal YF-S201
 const int sensorPin = D5; // d5
 const int measureInterval = 1000;
 volatile int pulseConter;
@@ -78,8 +93,8 @@ void smtpCallback(SMTP_Status status);
 WiFiClientSecure client;
 UniversalTelegramBot bot(BOTtoken, client);
 
-// Checks for new messages every 1 second.
-int botRequestDelay = 5000;
+// Checks for new messages every 2 second.
+int botRequestDelay = 2000;
 unsigned long lastTimeBotRan;
 
 // valores de los correos
@@ -96,6 +111,22 @@ int conf=0;
 
 
 String chat_id="";
+
+unsigned long epochTime;
+String formattedTime;
+int currentHour;
+int currentMinute;
+int currentSecond;
+String weekDay;
+int monthDay;
+int currentMonth;
+String currentMonthName;
+String currentYear;
+String currentDate;
+
+String caudalMax_Date;
+String caudalMax_Time;
+
 
 void enviarMensaje()
 {
@@ -127,7 +158,7 @@ void enviarMensaje()
   
 
   /* Set the message headers */
-  message.sender.name = "Sistema Agua_Iot";
+  message.sender.name = "Sistema Agua-IOT";
   message.sender.email = AUTHOR_EMAIL;
   message.subject = tituloCorreo.c_str();
   message.addRecipient(nickDestino.c_str(), direccionDestino.c_str());
@@ -207,7 +238,7 @@ void handleNewMessages(int numNewMessages) {
     if (bot.messages[i].type==F("callback_query") && conf==0) { 
           String text1 = bot.messages[i].text;
     if (text1==F("Caudal")){
-      bot.sendMessage(chat_id,"El caudal es de"+ String(flow_Lmin, 3)+ " L/min con un caudal maximo de "+ (String)(caudalMax)+" L/min.", "");
+      bot.sendMessage(chat_id,"El caudal es de"+ String(flow_Lmin, 3)+ " L/min con un caudal maximo de "+ (String)(caudalMax)+" L/min ocurrido en "+caudalMax_Date+" "+caudalMax_Time+" .", "");
       }
       else if (text1==F("Consumo")){
        bot.sendMessage(chat_id, "El volumen es de  "+ String(volumen,3)+ " Litros. ", ""); 
@@ -217,8 +248,7 @@ void handleNewMessages(int numNewMessages) {
     String text = bot.messages[i].text;
     if (text == "/caudal" && conf==0) {
          
-      bot.sendMessage(chat_id,"El caudal es "+ String(flow_Lmin, 3)+ " L/min con un caudal maximo de "+ (String)(caudalMax)+" L/min.", "");
-      Serial.println ("Caudal");
+      bot.sendMessage(chat_id,"El caudal es de"+ String(flow_Lmin, 3)+ " L/min con un caudal maximo de "+ (String)(caudalMax)+" L/min ocurrido en "+caudalMax_Date+" "+caudalMax_Time+" .", "");
     }
     
     if (text == "/consumo" && conf==0) {
@@ -240,7 +270,11 @@ String keyboardJson = "[[\"/caudal\", \"/consumo\"]]"; // usar botones con los n
     }
     if (text == "/informeCorreo" && conf==0)
     {
-      codigo="<p>El caudal es de  " + String (flow_Lmin,3)+" L/min con un caudal maximo de "+ (String)(caudalMax)+" L/min.\n El volumen es de "+String (volumen,3)+" Litros.</p><p> Este mensaje es enviado via NodeMCU por el Sistema Metro-Agua.</p>"; 
+      darHora();
+      codigo="<p>Resumen de Sistema Agua-IOT </p>";
+      codigo+="<p>El caudal es de  " + String (flow_Lmin,3)+" L/min con un caudal maximo de "+ (String)(caudalMax)+" L/min ocurrido en "+caudalMax_Date+" "+caudalMax_Time+" .</p>";
+      codigo+="<p>El volumen es de "+String (volumen,3)+" Litros.</p>";
+      codigo+="<p> Este mensaje es enviado con fecha "+currentDate + " a las "+ formattedTime+" via NodeMCU por el Sistema Agua-IOT.</p>"; 
       //tituloCorreo= "Datos de caudal y consumo de agua. ";
       //nickDestino= "Usuario_1";
       //direccionDestino="proy.iot2021@gmail.com";
@@ -370,6 +404,61 @@ String keyboardJson = "[[\"/caudal\", \"/consumo\"]]"; // usar botones con los n
 
   }
 }
+ void darHora()
+ {
+  timeClient.update();
+
+  epochTime = timeClient.getEpochTime();
+  Serial.print("Epoch Time: ");
+  Serial.println(epochTime);
+  
+  formattedTime = timeClient.getFormattedTime();
+  Serial.print("Formatted Time: ");
+  Serial.println(formattedTime);  
+
+  currentHour = timeClient.getHours();
+  Serial.print("Hour: ");
+  Serial.println(currentHour);  
+
+  currentMinute = timeClient.getMinutes();
+  Serial.print("Minutes: ");
+  Serial.println(currentMinute); 
+   
+  currentSecond = timeClient.getSeconds();
+  Serial.print("Seconds: ");
+  Serial.println(currentSecond);  
+
+  weekDay = weekDays[timeClient.getDay()];
+  Serial.print("Week Day: ");
+  Serial.println(weekDay);    
+
+  //Get a time structure
+  struct tm *ptm = gmtime ((time_t *)&epochTime); 
+
+  monthDay = ptm->tm_mday;
+  Serial.print("Month day: ");
+  Serial.println(monthDay);
+
+  currentMonth = ptm->tm_mon+1;
+  Serial.print("Month: ");
+  Serial.println(currentMonth);
+
+  currentMonthName = months[currentMonth-1];
+  Serial.print("Month name: ");
+  Serial.println(currentMonthName);
+
+  currentYear = ptm->tm_year+1900;
+  Serial.print("Year: ");
+  Serial.println(currentYear);
+
+  //Print complete date:
+  currentDate = String(currentYear) + "-" + String(currentMonth) + "-" + String(monthDay);
+  Serial.print("Current date: ");
+  Serial.println(currentDate);
+
+  Serial.println("");
+ }
+
 
  ICACHE_RAM_ATTR void ISRCountPulse()
 {
@@ -416,12 +505,16 @@ WiFi.mode(WIFI_STA);
   
  attachInterrupt(digitalPinToInterrupt(sensorPin), ISRCountPulse, RISING);
   t0 = millis();
-   
 
- 
-
-   
-   //enviarMensaje();
+ // Initialize a NTPClient to get time
+  timeClient.begin();
+  // Set offset time in seconds to adjust for your timezone, for example:
+  // GMT +1 = 3600
+  // GMT +8 = 28800
+  // GMT -1 = -3600
+  // GMT 0 = 0
+  timeClient.setTimeOffset(-14400); // -4=-14400 horario de verano -5=18000 horario normal
+  darHora(); 
 }
 
 void loop()
@@ -432,12 +525,13 @@ void loop()
     int numNewMessages = bot.getUpdates(bot.last_message_received + 1);
 
  if (caudalAlarma<=flow_Lmin){
-
-    bot.sendMessage("-560789110", "Alarma Caudal", "");
+    darHora();
+    bot.sendMessage(chat_id, currentDate+"  "+formattedTime+"\n"+"Alarma  de Caudal con valor de "+(String)(flow_Lmin)+" L/min", "");
     
     }
   if (volumenAlarma<=volumen){
-    bot.sendMessage(chat_id, "Alarma Volumen", "");
+    darHora();
+    bot.sendMessage(chat_id, currentDate+"  "+formattedTime+"\n"+"Alarma  de Volumen con valor de "+(String)(volumen)+" Litros", "");
     
     }
   
@@ -457,6 +551,9 @@ void loop()
 
   if (flow_Lmin>caudalMax) // Calculo del caudal max 
   {
+    darHora();
+    caudalMax_Date=currentDate;
+    caudalMax_Time=formattedTime;
     caudalMax=flow_Lmin;
   }
 
